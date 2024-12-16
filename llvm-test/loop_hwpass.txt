@@ -1,0 +1,32 @@
+Running HelloWorldPass on function: main
+Inspecting basic block:
+Basic block has 7 instructions.
+  Instruction:   %1 = alloca i32, align 4
+  Instruction:   %2 = alloca [5 x i32], align 16
+  Instruction:   %3 = alloca i32, align 4
+  Instruction:   store i32 0, ptr %1, align 4
+  Instruction:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %2, ptr align 16 @__const.main.array1, i64 20, i1 false)
+  Instruction:   store i32 0, ptr %3, align 4
+  Instruction:   br label %4
+Inspecting basic block:
+Basic block has 3 instructions.
+  Instruction:   %5 = load i32, ptr %3, align 4
+  Instruction:   %6 = icmp slt i32 %5, 5
+  Instruction:   br i1 %6, label %7, label %16
+Inspecting basic block:
+Basic block has 6 instructions.
+  Instruction:   %8 = load i32, ptr %3, align 4
+  Instruction:   %9 = sext i32 %8 to i64
+  Instruction:   %10 = getelementptr inbounds [5 x i32], ptr %2, i64 0, i64 %9
+  Instruction:   %11 = load i32, ptr %10, align 4
+  Instruction:   %12 = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %11)
+  Instruction:   br label %13
+Inspecting basic block:
+Basic block has 4 instructions.
+  Instruction:   %14 = load i32, ptr %3, align 4
+  Instruction:   %15 = add nsw i32 %14, 1
+  Instruction:   store i32 %15, ptr %3, align 4
+  Instruction:   br label %4
+Inspecting basic block:
+Basic block has 1 instructions.
+  Instruction:   ret i32 0
