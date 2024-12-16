@@ -1,7 +1,4 @@
 # LLVM Compiler Infrastructure
-
-This is a local build of LLVM
-
 Tests are in /llvm-test
 ### Command to compile a c program to llvm IR
 ```bash
