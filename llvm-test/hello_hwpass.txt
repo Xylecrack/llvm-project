@@ -1,7 +1,0 @@
-Running HelloWorldPass on function: main
-Inspecting basic block: 
-Basic block has 4 instructions.
-  Instruction:   %1 = alloca i32, align 4
-  Instruction:   store i32 0, ptr %1, align 4
-  Instruction:   %2 = call i32 (ptr, ...) @printf(ptr noundef @.str)
-  Instruction:   ret i32 0
