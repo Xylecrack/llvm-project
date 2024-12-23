@@ -7,25 +7,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/HelloWorld.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
-PreservedAnalyses HelloWorldPass::run(Function &F, FunctionAnalysisManager &AM) {
-  errs() << "Running HelloWorldPass on function: " << F.getName() << "\n";
-
-  // Iterate through the basic blocks in the function
-  for (BasicBlock &BB : F) {
-    errs() << "Inspecting basic block: " << BB.getName() << "\n";
-    errs() << "Basic block has " << BB.size() << " instructions.\n";
-
-    // Iterate through each instruction in the basic block
-    for (Instruction &I : BB) {
-      errs() << "  Instruction: " << I << "\n";
-    }
+void addControlFlowChecks(Function &F) {
+  int sign = 0;
+  DenseMap<BasicBlock *, int> blockSign; // si
+  DenseMap<BasicBlock *, int> signDiff;  // di
+  BasicBlock *BB = &F.getEntryBlock();
+  while (BB != nullptr) {
+    sign++;
+    blockSign[BB] = sign;
+    BB = BB->getSingleSuccessor();
+  }
+  BB = &F.getEntryBlock();
+  while (BB->getSingleSuccessor() != nullptr) {
+    signDiff[BB] = blockSign[BB] ^ blockSign[BB->getSingleSuccessor()];
+    BB = BB->getSingleSuccessor();
   }
 
-  return PreservedAnalyses::all();
+  // TO CALCULATE SUCCESSIVE DIFFERENCE (XOR) WITH THE PREDECESSOR
+}
+
+PreservedAnalyses HelloWorldPass::run(Function &F,
+                                      FunctionAnalysisManager &AM) {
+  errs() << "Hello, World!\n";
+  addControlFlowChecks(F);
+
+  return PreservedAnalyses::none();
 }
