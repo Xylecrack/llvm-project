@@ -12,11 +12,11 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-// Implementation of CFCSS Algorithm
 // REF:https://www.researchgate.net/publication/3152520_Control-flow_checking_by_software_signatures
 void addControlFlowChecks(Function &F) {
   int sign = 0;
@@ -25,9 +25,20 @@ void addControlFlowChecks(Function &F) {
   DenseMap<std::pair<BasicBlock *, BasicBlock *>, int> runtimeAdjustSign; // Dim
 
   // Step 1: Assign unique signatures to each basic block
+  int counter = 0;
+  int secondBlockSignature = 0;
+
   for (BasicBlock &BB : F) {
-    sign++;
-    blockSign[&BB] = sign;
+    if (counter == 1) {
+      blockSign[&BB] = ++sign;
+      secondBlockSignature = sign;
+    } else if (counter == 2) {
+
+      blockSign[&BB] = secondBlockSignature;
+    } else {
+      blockSign[&BB] = ++sign;
+    }
+    counter++;
   }
 
   // Step 2: Calculate signature differences for branch fan-in nodes
@@ -50,6 +61,24 @@ void addControlFlowChecks(Function &F) {
   // Step 3: Insert instructions to update and check the runtime signature
   LLVMContext &Context = F.getContext();
   IntegerType *Int32Ty = Type::getInt32Ty(Context);
+
+  BasicBlock *errorBlock = BasicBlock::Create(Context, "errorBlock", &F);
+  IRBuilder<> errorBuilder(errorBlock);
+
+  Function *printfFunc = dyn_cast<Function>(
+      F.getParent()
+          ->getOrInsertFunction(
+              "printf",
+              FunctionType::get(
+                  Type::getInt32Ty(Context),
+                  {PointerType::getUnqual(Type::getInt8Ty(Context))}, true))
+          .getCallee());
+  Value *formatStr =
+      errorBuilder.CreateGlobalStringPtr("Control flow error detected\n");
+  errorBuilder.CreateCall(printfFunc, {formatStr});
+  errorBuilder.CreateCall(
+      llvm::Intrinsic::getDeclaration(F.getParent(), llvm::Intrinsic::trap));
+  errorBuilder.CreateUnreachable();
 
   // Insert a signature variable at the function entry block
   IRBuilder<> entryBuilder(&F.getEntryBlock(), F.getEntryBlock().begin());
@@ -74,6 +103,8 @@ void addControlFlowChecks(Function &F) {
       Value *expectedSign = builder.CreateXor(updatedSign, currSignDiff);
       Value *loadedSign = builder.CreateLoad(Int32Ty, runtimeSign);
       Value *cmp = builder.CreateICmpNE(loadedSign, expectedSign);
+
+      builder.CreateCondBr(cmp, errorBlock, Succ);
 
       SmallVector<BasicBlock *, 4> Preds;
       for (BasicBlock *Pred : predecessors(Succ)) {
