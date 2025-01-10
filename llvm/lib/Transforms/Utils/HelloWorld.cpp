@@ -33,7 +33,6 @@ void addControlFlowChecks(Function &F) {
       blockSign[&BB] = ++sign;
       secondBlockSignature = sign;
     } else if (counter == 2) {
-
       blockSign[&BB] = secondBlockSignature;
     } else {
       blockSign[&BB] = ++sign;
@@ -65,17 +64,6 @@ void addControlFlowChecks(Function &F) {
   BasicBlock *errorBlock = BasicBlock::Create(Context, "errorBlock", &F);
   IRBuilder<> errorBuilder(errorBlock);
 
-  Function *printfFunc = dyn_cast<Function>(
-      F.getParent()
-          ->getOrInsertFunction(
-              "printf",
-              FunctionType::get(
-                  Type::getInt32Ty(Context),
-                  {PointerType::getUnqual(Type::getInt8Ty(Context))}, true))
-          .getCallee());
-  Value *formatStr =
-      errorBuilder.CreateGlobalStringPtr("Control flow error detected\n");
-  errorBuilder.CreateCall(printfFunc, {formatStr});
   errorBuilder.CreateCall(
       llvm::Intrinsic::getDeclaration(F.getParent(), llvm::Intrinsic::trap));
   errorBuilder.CreateUnreachable();
@@ -128,7 +116,7 @@ void addControlFlowChecks(Function &F) {
 
 PreservedAnalyses HelloWorldPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
-  errs() << "HelloWorld" << '\n';
+  errs() << "HelloWorld\n";
   addControlFlowChecks(F);
 
   return PreservedAnalyses::none();
