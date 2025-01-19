@@ -66,7 +66,7 @@ void addControlFlowChecks(Function &F) {
   IRBuilder<> errorBuilder(errorBlock);
 
   errorBuilder.CreateCall(
-      Intrinsic::getDeclaration(F.getParent(), Intrinsic::trap));
+      Intrinsic::getOrInsertDeclaration(F.getParent(), Intrinsic::trap));
   errorBuilder.CreateUnreachable();
   // Insert a signature variable at the function entry block
   IRBuilder<> entryBuilder(&F.getEntryBlock(), F.getEntryBlock().begin());
