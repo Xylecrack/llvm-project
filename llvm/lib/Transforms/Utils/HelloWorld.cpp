@@ -26,8 +26,19 @@ void addControlFlowChecks(Function &F) {
 
   // Step 1: Assign unique signatures to each basic block
 
+  int counter = 0;
+  int secondBlockSignature = 0;
+
   for (BasicBlock &BB : F) {
-    blockSign[&BB] = sign++;
+    if (counter == 1) {
+      blockSign[&BB] = sign++;
+      secondBlockSignature = sign;
+    } else if (counter == 2) {
+      blockSign[&BB] = secondBlockSignature;
+    } else {
+      blockSign[&BB] = ++sign;
+    }
+    counter++;
   }
 
   // Step 2: Calculate signature differences for branch fan-in nodes
@@ -51,6 +62,12 @@ void addControlFlowChecks(Function &F) {
   LLVMContext &Context = F.getContext();
   IntegerType *Int32Ty = Type::getInt32Ty(Context);
 
+  BasicBlock *errorBlock = BasicBlock::Create(Context, "errorblock", &F);
+  IRBuilder<> errorBuilder(errorBlock);
+
+  errorBuilder.CreateCall(
+      Intrinsic::getDeclaration(F.getParent(), Intrinsic::trap));
+  errorBuilder.CreateUnreachable();
   // Insert a signature variable at the function entry block
   IRBuilder<> entryBuilder(&F.getEntryBlock(), F.getEntryBlock().begin());
   AllocaInst *runtimeSign =
@@ -59,22 +76,23 @@ void addControlFlowChecks(Function &F) {
 
   // Insert instructions in each basic block
   for (BasicBlock &BB : F) {
-    Instruction *secondInst = &*BB.begin()->getNextNode()->getNextNode();
+    Instruction *secondInst = &*std::next(BB.begin(), 2);
     IRBuilder<> builder(secondInst);
-
     Value *currentSign = builder.CreateLoad(Int32Ty, runtimeSign);
+
     // XOR runtimeSign with blockSign
     Value *blockSignature = builder.getInt32(blockSign[&BB]);
     Value *updatedSign = builder.CreateXor(currentSign, blockSignature);
     builder.CreateStore(updatedSign, runtimeSign);
-    F.dump();
+
     // Compare runtimeSign and signDiff
     for (BasicBlock *Succ : successors(&BB)) {
       Value *currSignDiff = builder.getInt32(signDiff[Succ]);
       Value *expectedSign = builder.CreateXor(updatedSign, currSignDiff);
       Value *loadedSign = builder.CreateLoad(Int32Ty, runtimeSign);
       Value *cmp = builder.CreateICmpNE(loadedSign, expectedSign);
-      F.dump();
+
+      builder.CreateCondBr(cmp, errorBlock, Succ);
       SmallVector<BasicBlock *, 4> Preds;
       for (BasicBlock *Pred : predecessors(Succ)) {
         Preds.push_back(Pred);
@@ -98,5 +116,6 @@ void addControlFlowChecks(Function &F) {
 PreservedAnalyses HelloWorldPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
   addControlFlowChecks(F);
+  F.dump();
   return PreservedAnalyses::none();
 }
